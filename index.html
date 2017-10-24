@@ -1,1 +1,362 @@
-fdsa
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>hello phaser!</title>
+        <script src="//cdn.jsdelivr.net/phaser/2.5.0/phaser.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+		<script src="monaco-editor/min/vs/loader.js"></script>
+
+		<style>
+			* {
+				padding: 0;
+				margin: 0;
+				font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif
+			}
+			
+			.hackerTab {
+				display: inline-block;
+				background: #eee;
+				border: 1px solid #aaa;
+				padding: 10px 20px 5px 20px;
+				border-radius: 10px 10px 0 0;
+				cursor: pointer;
+				color: #888;
+			}
+			
+			.hackerTab.active {
+				color: #111
+			}
+			
+			#consoleWrapper {
+				font-family: "Lucida Console", Monaco, monospace;
+				color: green;
+				font-weight: bold;
+			}
+
+			.consolePrefix {
+				position: absolute;
+				display: block;
+				left: 5px;
+				bottom: 10px;
+				z-index: 90;
+			}
+			
+			.consoleInput {
+				position: absolute;
+				width: 90%;
+				bottom: 0;
+				background: #040404;
+				color: green;
+				border: 2px solid green;
+				height: 40px;
+				padding-left: 20px;
+				font-weight: bold;
+			}
+			
+			.consoleLog {
+				padding-bottom: 200px;
+				margin-bottom: -200px;
+				background: #040404;
+				overflow-y: auto;
+			}
+			
+			.consoleLogLine {
+				overflow: hidden;
+				text-overflow: ellipsis;
+				padding: 5px;
+			}
+			
+			.consoleLogPadding {
+				height: 60px;
+			}
+			
+			.consoleLoga {
+			  display: block;
+			  width: 10em;
+			  overflow: auto;
+			  height: 2em;
+			}
+			.consoleLoga::-webkit-scrollbar {
+			  display: none;
+			}
+
+			/* Demonstrate a "mostly customized" scrollbar
+			 * (won't be visible otherwise if width/height is specified) */
+			.consoleLog::-webkit-scrollbar {
+			  width: 5px;
+			  height: 8px;
+			  background-color: #aaa; /* or add it to the track */
+			}
+			/* Add a thumb */
+			.consoleLog::-webkit-scrollbar-thumb {
+				background: #000; 
+			}
+			
+		</style>
+
+    </head>
+    <body>
+
+    <script type="text/javascript">
+	
+	
+	var hackerTabContents = [];
+	var hackerTabs = [];
+
+    window.onload = function() {
+
+        //  Note that this html file is set to pull down Phaser 2.5.0 from the JS Delivr CDN.
+        //  Although it will work fine with this tutorial, it's almost certainly not the most current version.
+        //  Be sure to replace it with an updated version before you start experimenting with adding your own code.
+
+        game = new Phaser.Game($(window).width(), $(window).height() / 2, Phaser.AUTO, '', { preload: preload, create: create, update: update, render: render });
+		
+
+        function preload () {
+
+		    game.load.spritesheet('person', 'person_sprite.png', 145, 389, 20);
+
+        }
+
+        function create () {
+			
+			    //  Enable p2 physics
+			game.physics.startSystem(Phaser.Physics.P2JS);
+			currentGravity = 4000;
+			game.physics.p2.gravity.y = currentGravity;
+			game.physics.p2.restitution = 0.1;
+			
+			cursors = game.input.keyboard.createCursorKeys();
+			facingLeft = false;
+			walking = false;
+			jumping = false;
+			maxVelX = 400;
+
+            person = game.add.sprite(game.world.centerX, game.world.centerY, 'person');
+            person.anchor.setTo(0.5, 0.5);
+			walk = person.animations.add('walk');
+			person.animations.play('walk', 30, true);
+			person.scale.x *= 0.4;
+			person.scale.y *= 0.4;
+
+			game.physics.p2.enable([ person ], false);
+
+			person.body.fixedRotation = true;			
+
+		    game.input.gamepad.start();
+
+			pad1 = game.input.gamepad.pad1;
+							
+			var $hackerWrapper = $('<div>').appendTo('body');
+			$hackerWrapper.css({
+				height: $(window).height() / 2 + 'px'
+			});
+			
+			var $hackerTabs = $('<div>').appendTo($hackerWrapper);
+			$hackerTabs.css({
+				height: '40px'
+			});
+			
+			var $hackerContentPane = $('<div>').appendTo($hackerWrapper);
+			$hackerContentPane.css({
+				position: 'relative',
+				height: $(window).height() / 2 - 40 + 'px'
+			});
+			
+			var $notificationsPane = $('<div>');
+			$notificationsPane.css ({
+				width: '100%',
+				height: '100%',
+				background: '#eee'
+			});
+			addTab('Notifications', $notificationsPane);
+			
+			$notificationsPane.html('Hiiiiiiiii!');
+			
+			var $consoleWrapper = $('<div>');
+			$consoleWrapper.attr('id', 'consoleWrapper');
+						
+			var $consoleInput = $('<input>').appendTo($consoleWrapper);
+			$consoleInput.addClass('consoleInput');
+			$consoleInput.on('keypress', function(event) {
+				if( event.keyCode === 13 ) {
+					var command = $consoleInput.val();
+					var commandArray = command.split(' ');
+					if (commandArray[0] === 'set') {
+						if (commandArray[1] === 'gravity') {
+							var gravityAmount = currentGravity;
+							try {
+								currentGravity = Number(commandArray[2]);
+							} catch (e) {}
+							game.physics.p2.gravity.y = currentGravity;
+						}
+					}
+					emitConsoleLog($consoleInput.val());
+					$consoleInput.val('');
+				}
+			});
+			
+			var $consolePrefix = $('<div>').appendTo($consoleWrapper);
+			$consolePrefix.html('>');
+			$consolePrefix.addClass('consolePrefix');
+			
+			var $consoleCommitButton = $('<div>').appendTo($consoleWrapper);
+			$consoleCommitButton.css({
+				position: 'absolute',
+				bottom: 0,
+				right: 0,
+				padding: '10px',
+				color: 'green',
+				border: '2px solid green',
+				borderRadius: '5px 5px 0 0',
+				cursor: 'pointer',
+				background: '#040404'
+			});
+			$consoleCommitButton.html('Commit');
+			$consoleCommitButton.on('click', function() {
+				emitConsoleLog($consoleInput.val());
+				$consoleInput.val('');
+			});
+			
+			$consoleLog = $('<div>').appendTo($consoleWrapper);
+			$consoleLog.addClass('consoleLog');
+			$consoleLog.css({
+				height: $hackerContentPane.height() + 'px'
+			});
+			
+			$consoleLogPadding = $('<div>').appendTo($consoleLog);
+			$consoleLogPadding.addClass('consoleLogPadding');
+			
+			addTab('Hacker Console', $consoleWrapper);
+			
+			function emitConsoleLog(text) {
+				var $logLine = $('<div>').appendTo($consoleLog);
+				$logLine.addClass('consoleLogLine');
+				$logLine.html('> ' + text);
+				$consoleLogPadding.appendTo($consoleLog);
+				$consoleLog.scrollTop(9999999);
+			}
+			
+			function addTab(title, $content) {
+				$content.css({
+					top: 0,
+					width: '100%',
+					position: 'absolute'
+				});
+				$hackerContentPane.append($content);
+				var $tab = $('<div>').appendTo($hackerTabs);
+				$tab.html(title);
+				$tab.addClass('hackerTab');
+				
+				hackerTabs.push($tab);
+				hackerTabContents.push($content);
+				$tab.on('click', function() {
+					hackerTabs.forEach(function($e, i) {
+						$e.removeClass('active');
+					});
+					hackerTabContents.forEach(function($e, i) {
+						$e.fadeOut();
+					});
+					$tab.addClass('active');
+					$content.fadeIn();
+				});
+				
+				if (hackerTabs.length !== 2) {
+					$content.hide();
+				} else {
+					$tab.addClass('active');
+				}
+			}
+			
+			setInterval(function() {
+				$consoleInput.focus();
+			}, 200);
+			$consoleInput.focus();
+			
+			emitConsoleLog("Time to hack");
+			for (i=0; i<20;i++) {
+				emitConsoleLog("");
+			}
+        }
+		function update() {
+	
+			nowWalking = false;
+			nowFacingLeft = false;
+			// person.body.applyDamping(.1);
+			
+			if (pad1.connected) {
+				leftStickX = pad1.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_X);
+				leftStickY = pad1.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_Y);
+
+				if (leftStickX) {
+					person.body.velocity.x += leftStickX * 40;
+					maxVelX = leftStickX * 500;
+					nowWalking = true;
+					nowFacingLeft = leftStickX < 0;
+				}
+
+			}
+			
+			if (cursors.left.isDown) { 
+				nowWalking = true;
+				person.body.velocity.x -= 40;
+				nowFacingLeft = true;
+				maxVelX = -400;
+			} else if (cursors.right.isDown) {
+				nowWalking = true;
+				person.body.velocity.x += 40;
+				maxVelX = 400;
+			}
+			
+			if ((cursors.up.isDown || pad1.justPressed(Phaser.Gamepad.XBOX360_A)) && !jumping && !Math.round(person.body.velocity.y)) {
+				jumping = true;
+				person.body.velocity.y = -1500;
+			}
+			
+			if (!Math.round(person.body.velocity.y)) {
+				jumping = false;
+			}
+			
+			if (maxVelX > 0 ) {
+				person.body.velocity.x = Math.min(person.body.velocity.x, maxVelX);
+			} else {
+				person.body.velocity.x = Math.max(person.body.velocity.x, maxVelX);
+			}
+			
+			
+			
+			if (walking) {
+				if (!nowWalking) {
+					walking = false;
+				} else {
+					if (!facingLeft && nowFacingLeft) {
+						person.scale.x *= -1;
+						facingLeft = nowFacingLeft;
+					} else if (facingLeft && !nowFacingLeft) {
+						person.scale.x *= -1;
+						facingLeft = nowFacingLeft;
+					}
+				}
+			} else {
+				//person.animations.frame = 0;
+				person.animations.paused = false;
+			}
+			walking = nowWalking;
+			
+		}
+
+		function render() {
+
+			
+
+		}
+
+
+    };
+
+    </script>
+
+
+    </body>
+</html>
