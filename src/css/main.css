@@ -1,0 +1,88 @@
+* {
+  padding: 0;
+  margin: 0;
+  font-family: "Lucida Sans Unicode", "Lucida Grande", sans-serif
+}
+
+.hackerTab {
+  display: inline-block;
+  background: #eee;
+  border: 1px solid #aaa;
+  padding: 10px 20px 5px 20px;
+  border-radius: 10px 10px 0 0;
+  cursor: pointer;
+  color: #888;
+}
+
+.hackerTab.active {
+  color: #111
+}
+
+#consoleWrapper {
+  font-family: "Lucida Console", Monaco, monospace;
+  color: green;
+  font-weight: bold;
+}
+
+.consolePrefix {
+  position: absolute;
+  display: block;
+  left: 5px;
+  bottom: 10px;
+  z-index: 90;
+}
+
+.consoleInput {
+  position: absolute;
+  width: 90%;
+  bottom: 0;
+  background: #040404;
+  color: green;
+  border: 2px solid green;
+  height: 40px;
+  padding-left: 20px;
+  font-weight: bold;
+}
+
+.consoleLog {
+  padding-bottom: 200px;
+  margin-bottom: -200px;
+  background: #040404;
+  overflow-y: auto;
+}
+
+.consoleLogLine, .consoleErrorLine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 5px;
+}
+
+.consoleErrorLine {
+  color: #ee1111;
+}
+
+.consoleLogPadding {
+  height: 60px;
+}
+
+.consoleLoga {
+  display: block;
+  width: 10em;
+  overflow: auto;
+  height: 2em;
+}
+.consoleLoga::-webkit-scrollbar {
+  display: none;
+}
+
+/* Demonstrate a "mostly customized" scrollbar
+* (won't be visible otherwise if width/height is specified) */
+.consoleLog::-webkit-scrollbar {
+  width: 5px;
+  height: 8px;
+  background-color: #aaa; /* or add it to the track */
+}
+/* Add a thumb */
+.consoleLog::-webkit-scrollbar-thumb {
+  background: #000;
+}
