@@ -1,10 +1,13 @@
 function PhaserEngine() {
 
+  mapWidth = 100;
+  mapHeight = 15;
+  tileSize = 32;
   var phaserEngine = {
     readyListeners: [],
     init: function() {
       phaserEngine.game = new Phaser.Game($(window).width(),
-                             $(window).height() / 2,
+                             mapHeight * tileSize,
                              Phaser.AUTO,
                              '',
                              {
@@ -17,11 +20,35 @@ function PhaserEngine() {
     },
     preload: function() {
       phaserEngine.game.load.spritesheet('person', 'person_sprite.png', 145, 389, 20);
+      phaserEngine.game.load.image('tileset_1', 'src/tilesets/map_tileset_1.png');
     },
     create: function() {
 
+      phaserEngine.map = phaserEngine.game.add.tilemap();
+      phaserEngine.map.addTilesetImage('tileset_1');
+
+
+      phaserEngine.layer2 = phaserEngine.map.create('layer2', mapWidth, mapHeight, 32, 32);
+      for (i=0; i < mapWidth; i++) {
+        for (j=0; j < mapHeight; j++) {
+          phaserEngine.map.putTile(10, i, j, phaserEngine.layer2);
+        }
+      }
+
+      phaserEngine.layer1 = phaserEngine.map.create('layer1', mapWidth, mapHeight, 32, 32);
+      phaserEngine.layer1.resizeWorld();
+
+      phaserEngine.map.setCollisionBetween(0, 9, true, phaserEngine.layer1, true);
+      phaserEngine.map.setCollisionBetween(11, 20, true, phaserEngine.layer1, true);
+
+
       phaserEngine.game.physics.startSystem(Phaser.Physics.P2JS);
-      phaserEngine.game.physics.p2.restitution = 0.1;
+      phaserEngine.game.physics.p2.gravity.y = 350;
+      phaserEngine.game.physics.p2.world.defaultContactMaterial.friction = 0.3;
+      phaserEngine.game.physics.p2.world.setGlobalStiffness(1e5);
+
+      phaserEngine.game.physics.p2.convertTilemap(phaserEngine.map, phaserEngine.layer1);
+
 
       // cursors = phaserEngine.game.input.keyboard.createCursorKeys();
       facingLeft = false;
@@ -40,6 +67,14 @@ function PhaserEngine() {
       });
 
     },
+    loadTilemap: function(data) {
+      data.tiles.forEach(function(tile) {
+        phaserEngine.map.putTile(Number(tile.tileIndex), tile.x, tile.y, phaserEngine.layer1);
+      });
+      //phaserEngine.map.setCollisionBetween(0, 8, true, phaserEngine.layer1, true);
+      phaserEngine.game.physics.p2.convertTilemap(phaserEngine.map, phaserEngine.layer1);
+
+    },
     update: function() {
 
           nowWalking = false;
@@ -50,6 +85,9 @@ function PhaserEngine() {
             leftStickX = pad1.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_X);
             leftStickY = pad1.axis(Phaser.Gamepad.XBOX360_STICK_LEFT_Y);
 
+            if (Math.abs(leftStickX) < 0.15) {
+              leftStickX = false;
+            }
             if (leftStickX) {
               person.body.velocity.x += leftStickX * 200;
               maxVelX = leftStickX * 500;
@@ -68,9 +106,9 @@ function PhaserEngine() {
             jumping = false;
           }
 
-          if (maxVelX > 0 ) {
+          if (maxVelX > 0 && nowWalking) {
             person.body.velocity.x = Math.min(person.body.velocity.x, maxVelX);
-          } else {
+          } else if (nowWalking) {
             person.body.velocity.x = Math.max(person.body.velocity.x, maxVelX);
           }
 
@@ -88,9 +126,12 @@ function PhaserEngine() {
             }
           } else {
             //person.animations.frame = 0;
+            console.log(person.body.velocity.x);
+            person.body.velocity.x *= 0.9;
             person.animations.paused = false;
           }
           walking = nowWalking;
+
     },
     render: function() {
 
@@ -108,6 +149,9 @@ function PhaserEngine() {
           walk = person.animations.add('walk');
           person.animations.play('walk', 30, true);
           person.body.fixedRotation = true;
+          person.body.damping = 0.5;
+          person.body.x = 100;
+          phaserEngine.game.camera.follow(person);
         },
         flip: function() {
           person.scale.y *= -1;

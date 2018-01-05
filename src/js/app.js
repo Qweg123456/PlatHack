@@ -1,3 +1,8 @@
+startingMapData = {tiles:[
+  {tileIndex: 1, x: 10, y: 10},
+  {tileIndex: 2, x: 15, y: 10},
+  {tileIndex: 3, x: 8, y: 12}
+]};
 startingConsoleString = "";
 var hackerTabContents = [];
 var hackerTabs = [];
@@ -168,6 +173,14 @@ window.onload = function() {
 
       addTab('Hacker Console', $consoleWrapper);
 
+
+      $mapLoaderWrapper = $('<div>');
+      $mapLoadButton = $('<div>').html('Load').appendTo($mapLoaderWrapper).on('click', function() {
+        loadMap();
+      });
+      $mapData = $('<textarea>').appendTo($mapLoaderWrapper).val(JSON.stringify(startingMapData));
+      addTab('Map Loader', $mapLoaderWrapper);
+
       function emitConsoleCommand(text) {
         var $logLine = $('<div>').appendTo($consoleLog);
         $logLine.addClass('consoleLogLine');
@@ -228,6 +241,24 @@ window.onload = function() {
       }, 200);
       $consoleInput.focus();
       $consoleInput.val(startingConsoleString);
+
+      function loadMap(data) {
+        var mapData = data;
+        if (data === undefined) {
+          mapData = JSON.parse($mapData.val());
+        }
+        $mapData.val(JSON.stringify(mapData));
+        gameEngine.loadTilemap(mapData);
+      }
+
+      $.ajax({
+        dataType: "json",
+        url: 'src/maps/map1.json',
+        success: function(data) {
+          map1 = data;
+          loadMap(map1);
+        }
+      });
 
       emitConsoleLog("Time to hack");
     });
